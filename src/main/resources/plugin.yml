@@ -4,3 +4,11 @@ main: dev.polychroma.configeditor.Configeditor
 api-version: 1.18
 authors: [ Safyre ]
 description: Allows you to edit config files from in game
+commands:
+  config:
+    description: "Edit the config of another plugin"
+    aliases: ["editconfig"]
+    permission: config.edit
+permissions:
+  config.edit:
+    default: op
