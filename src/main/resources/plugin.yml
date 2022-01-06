@@ -1,4 +1,4 @@
-name: Configeditor
+name: ConfigEditor
 version: '${project.version}'
 main: dev.polychroma.configeditor.Configeditor
 api-version: 1.18
@@ -7,8 +7,8 @@ description: Allows you to edit config files from in game
 commands:
   config:
     description: "Edit the config of another plugin"
-    aliases: ["editconfig"]
+    aliases: ["editconfig", "cfg"]
     permission: config.edit
 permissions:
   config.edit:
-    default: op
+    default: false

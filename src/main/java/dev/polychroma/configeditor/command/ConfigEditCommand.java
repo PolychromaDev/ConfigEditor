@@ -1,5 +1,6 @@
 package dev.polychroma.configeditor.command;
 
+import dev.polychroma.configeditor.ChatUtils;
 import dev.polychroma.configeditor.Configeditor;
 import dev.polychroma.configeditor.Pair;
 import org.bukkit.command.Command;
@@ -15,7 +16,6 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-//TODO: Colored messages
 public class ConfigEditCommand implements TabExecutor {
 
     private final HashMap<String, Pair<File, YamlConfiguration>> configFiles = new HashMap<>();
@@ -28,16 +28,18 @@ public class ConfigEditCommand implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if(!sender.hasPermission("config.edit")){
+            sender.sendMessage(ChatUtils.MESSAGE_FAIL_COLOR + "You do not have permission to use this command.");
+        }
         if (args.length < 1) {
-            //TODO: Replace with help message
-            sender.sendMessage("Please specify sub command");
+            sender.sendMessage(getHelpMessage());
             return true;
         }
         switch (args[0]) {
             case "load":
                 if (args.length < 2) {
-                    //TODO: Replace with command-specific help message
-                    sender.sendMessage("Please specify which plugin you'd like to load the config of");
+                    sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_FAIL_COLOR + "Invalid syntax!");
+                    sender.sendMessage(getloadSyntax());
                     return true;
                 }
                 if (args.length == 3) {
@@ -48,32 +50,31 @@ public class ConfigEditCommand implements TabExecutor {
                 return true;
             case "read":
                 if (args.length < 3) {
-                    //TODO: Replace with command-specific help message
-                    sender.sendMessage("Please specify plugin and property name");
+                    sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_FAIL_COLOR + "Invalid syntax!");
+                    sender.sendMessage(getReadSyntax());
                     return true;
                 }
                 onReadCommand(args[1], sender, args[2]);
                 return true;
             case "set":
                 if (args.length < 4) {
-                    //TODO: Replace with command-specific help message
-                    sender.sendMessage("Please specify plugin, property name, and value");
+                    sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_FAIL_COLOR + "Invalid syntax!");
+                    sender.sendMessage(getSetSyntax());
                     return true;
                 }
                 onSetCommand(args[1], sender, args[2], args[3]);
                 return true;
             case "save":
                 if (args.length < 2){
-                    //TODO: Replace with command-specific help message
-                    sender.sendMessage("Please specify plugin");
+                    sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_FAIL_COLOR + "Invalid syntax!");
+                    sender.sendMessage(getSaveSyntax());
                     return true;
                 }
                 onSaveCommand(args[1], sender);
                 return true;
             default:
-                //TODO: Replace with help message
-                sender.sendMessage("Sub command not recognized");
-                return false;
+                sender.sendMessage(getHelpMessage());
+                return true;
         }
     }
 
@@ -87,7 +88,7 @@ public class ConfigEditCommand implements TabExecutor {
     private void onLoadCommand(String plugin, CommandSender sender, @Nullable String fileName) {
         Plugin targetPlugin = pluginManager.getPlugin(plugin);
         if (targetPlugin == null) {
-            sender.sendMessage("Unable to find plugin " + plugin);
+            sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_FAIL_COLOR + "Unable to find plugin " + plugin + ".");
             return;
         }
 
@@ -98,19 +99,19 @@ public class ConfigEditCommand implements TabExecutor {
         File targetFile = new File(targetDir, fileName);
 
         if (!targetFile.exists()) {
-            sender.sendMessage("Unable to find config file \"" + fileName + "\" for plugin " + plugin);
+            sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_FAIL_COLOR + "Unable to find config file \"" + fileName + "\" for plugin " + plugin + ".");
             return;
         }
 
         YamlConfiguration targetConfig = YamlConfiguration.loadConfiguration(targetFile);
         configFiles.put(plugin, new Pair<>(targetFile, targetConfig));
 
-        sender.sendMessage("Config file for " + plugin + " has been loaded. You can now edit it with /config edit " + plugin);
+        sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_SUCCESS_COLOR + "Config file for " + plugin + " has been loaded.");
     }
 
     private void onReadCommand(String plugin, CommandSender sender, String field) {
         if (!configFiles.containsKey(plugin)) {
-            sender.sendMessage("Config file for " + plugin + " has not been loaded. Please use the /config load command first");
+            sender.sendMessage(ChatUtils.MESSAGE_FAIL_COLOR + "Config file for " + plugin + " has not been loaded. Please use the /config load command first");
             return;
         }
 
@@ -118,18 +119,18 @@ public class ConfigEditCommand implements TabExecutor {
 
         Object o = configuration.get(field);
 
-        sender.sendMessage("The value for " + field + " is");
+        sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_SUCCESS_COLOR + "The value for " + field + " is");
         //TODO: Might have to change what is displayed depending on what value type is saved
         if (o == null) {
-            sender.sendMessage("NULL");
+            sender.sendMessage(ChatUtils.SECONDARY_COLOR + "NULL");
         } else {
-            sender.sendMessage(o.toString());
+            sender.sendMessage(ChatUtils.SECONDARY_COLOR + o.toString());
         }
     }
 
     private void onSetCommand(String plugin, CommandSender sender, String field, String value) {
         if (!configFiles.containsKey(plugin)) {
-            sender.sendMessage("Config file for " + plugin + " has not been loaded. Please use the /config load command first");
+            sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_FAIL_COLOR + "Config file for " + plugin + " has not been loaded. Please use the /config load command first.");
             return;
         }
 
@@ -137,12 +138,12 @@ public class ConfigEditCommand implements TabExecutor {
         //TODO: Change how value is set depending on current value type
         configuration.set(field, value);
 
-        sender.sendMessage("Set the value of " + field + " to " + value);
+        sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_SUCCESS_COLOR + "Set the value of " + field + " to " + ChatUtils.SECONDARY_COLOR + value + ChatUtils.MESSAGE_SUCCESS_COLOR + ".");
     }
 
     private void onSaveCommand(String plugin, CommandSender sender){
         if (!configFiles.containsKey(plugin)) {
-            sender.sendMessage("Config file for " + plugin + " has not been loaded. Please use the /config load command first");
+            sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_FAIL_COLOR + "Config file for " + plugin + " has not been loaded. Please use the /config load command first.");
             return;
         }
 
@@ -152,16 +153,16 @@ public class ConfigEditCommand implements TabExecutor {
             configuration.save(file);
         } catch (IOException e) {
             e.printStackTrace();
-            sender.sendMessage("Unable to save configuration file");
+            sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_FAIL_COLOR + "Unable to save configuration file!");
         }
 
-        sender.sendMessage("Changes saved to file");
+        sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_SUCCESS_COLOR + "Changes saved to file. " + plugin + " will need to be reloaded before changes are applied.");
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length < 1) {
-            return null;
+            return Collections.emptyList();
         }
         //sub-command
         if (args.length == 1) {
@@ -179,7 +180,7 @@ public class ConfigEditCommand implements TabExecutor {
         if (args.length == 3) {
             return getFieldNames(args[1], args[2]);
         }
-        return null;
+        return Collections.emptyList();
     }
 
     private List<String> getSubCommands() {
@@ -201,6 +202,9 @@ public class ConfigEditCommand implements TabExecutor {
     }
 
     private List<String> getFieldNames(String plugin, String depth) {
+        if(!configFiles.containsKey(plugin)){
+           return null;
+        }
         YamlConfiguration config = configFiles.get(plugin).getRight();
 
         Set<String> possibleKeys = config.getKeys(true);
@@ -208,6 +212,48 @@ public class ConfigEditCommand implements TabExecutor {
         return possibleKeys.stream()
                 .filter(s -> s.startsWith(depth))
                 .collect(Collectors.toList());
+    }
+
+    private String getHelpMessage(){
+        return ChatUtils.PREFIX + ChatUtils.MESSAGE_COLOR + " - A plugin by Safyre" + "\n" +
+                "    " + getloadSyntax() + ChatUtils.MESSAGE_COLOR + " - " + getLoadDescription() + "\n" +
+                "    " + getReadSyntax() + ChatUtils.MESSAGE_COLOR + " - " + getReadDescription() + "\n" +
+                "    " + getSetSyntax() + ChatUtils.MESSAGE_COLOR + " - " + getSetDescription() + "\n" +
+                "    " + getSaveSyntax() + ChatUtils.MESSAGE_COLOR + " - " + getSaveDescription() + "\n";
+    }
+
+    private String getloadSyntax(){
+        return ChatUtils.MESSAGE_COLOR + "/config load " + ChatUtils.MAIN_COLOR + "<plugin name> " + ChatUtils.SECONDARY_COLOR + "[file name]";
+    }
+
+    private String getLoadDescription(){
+        return ChatUtils.MESSAGE_COLOR +
+                "Loads the config for a plugin. Optionally you can specify the file name if it differs from" +
+                ChatUtils.MAIN_COLOR + " \"config.yml\"" + ChatUtils.MESSAGE_COLOR + ".";
+    }
+
+    private String getReadSyntax(){
+        return ChatUtils.MESSAGE_COLOR + "/config read " + ChatUtils.MAIN_COLOR + "<plugin name> <property key>";
+    }
+
+    private String getReadDescription(){
+        return ChatUtils.MESSAGE_COLOR + "Reads a value from the config.";
+    }
+
+    private String getSetSyntax(){
+        return ChatUtils.MESSAGE_COLOR + "/config set " + ChatUtils.MAIN_COLOR + "<plugin name> <property key> <value>";
+    }
+
+    private String getSetDescription(){
+        return ChatUtils.MESSAGE_COLOR + "Sets a value in the config.";
+    }
+
+    private String getSaveSyntax(){
+        return ChatUtils.MESSAGE_COLOR + "/config save " + ChatUtils.MAIN_COLOR + "<plugin name>";
+    }
+
+    private String getSaveDescription(){
+        return ChatUtils.MESSAGE_COLOR + "Saves the changes from the config to the original file.";
     }
 
 }
