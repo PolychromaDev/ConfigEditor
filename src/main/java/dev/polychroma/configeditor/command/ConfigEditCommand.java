@@ -6,6 +6,8 @@ import dev.polychroma.configeditor.Pair;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
+import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.MemorySection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
@@ -14,6 +16,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -150,9 +153,12 @@ public class ConfigEditCommand implements TabExecutor {
         Object o = configuration.get(field);
 
         sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_SUCCESS_COLOR + "The value for " + field + " is");
-        //TODO: Might have to change what is displayed depending on what value type is saved
         if (o == null) {
             sender.sendMessage(ChatUtils.SECONDARY_COLOR + "NULL");
+        } else if (o instanceof MemorySection) {
+            YamlConfiguration config = new YamlConfiguration();
+            config.set(field, o);
+            sender.sendMessage(ChatUtils.SECONDARY_COLOR + config.saveToString());
         } else {
             sender.sendMessage(ChatUtils.SECONDARY_COLOR + o.toString());
         }
@@ -165,10 +171,18 @@ public class ConfigEditCommand implements TabExecutor {
         }
 
         YamlConfiguration configuration = configFiles.get(plugin).getRight();
-        //TODO: Change how value is set depending on current value type
-        configuration.set(field, value);
 
-        sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_SUCCESS_COLOR + "Set the value of " + field + " to " + ChatUtils.SECONDARY_COLOR + value + ChatUtils.MESSAGE_SUCCESS_COLOR + ".");
+        YamlConfiguration config1 = new YamlConfiguration();
+
+        try {
+            config1.load(new StringReader("{\"" + field + "\":" + value + "}"));
+            configuration.set(field, config1.get(field));
+
+            sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_SUCCESS_COLOR + "Set the value of " + field + " to");
+            sender.sendMessage(ChatUtils.SECONDARY_COLOR + config1.saveToString());
+        } catch (IOException | InvalidConfigurationException ex) {
+            sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_FAIL_COLOR + ex.getMessage());
+        }
     }
 
     private void onSaveCommand(String plugin, CommandSender sender) {
