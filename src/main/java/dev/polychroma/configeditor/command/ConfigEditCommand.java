@@ -6,6 +6,8 @@ import dev.polychroma.configeditor.Pair;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
+import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.MemorySection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
@@ -14,6 +16,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -45,10 +48,10 @@ public class ConfigEditCommand implements TabExecutor {
                     sender.sendMessage(getloadSyntax());
                     return true;
                 }
-                if (args.length == 3) {
-                    onLoadCommand(args[1], sender, args[2]);
-                } else {
+                if (args.length == 2) {
                     onLoadCommand(args[1], sender, null);
+                } else {
+                    onLoadCommand(args[1], sender, args[2]);
                 }
                 return true;
             }
@@ -86,13 +89,13 @@ public class ConfigEditCommand implements TabExecutor {
                     return true;
                 }
                 String pg;
-                if (args.length == 3) {
+                if (args.length >= 3) {
                     pg = args[2];
                 } else {
                     pg = "1";
                 }
                 try {
-                    int page = Integer.parseInt(pg);
+                    int page = Integer.parseInt(pg) - 1;
                     onPrintCommand(args[1], sender, page);
                     return true;
                 } catch (NumberFormatException e) {
@@ -150,9 +153,12 @@ public class ConfigEditCommand implements TabExecutor {
         Object o = configuration.get(field);
 
         sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_SUCCESS_COLOR + "The value for " + field + " is");
-        //TODO: Might have to change what is displayed depending on what value type is saved
         if (o == null) {
             sender.sendMessage(ChatUtils.SECONDARY_COLOR + "NULL");
+        } else if (o instanceof MemorySection) {
+            YamlConfiguration config = new YamlConfiguration();
+            config.set(field, o);
+            sender.sendMessage(ChatUtils.SECONDARY_COLOR + config.saveToString());
         } else {
             sender.sendMessage(ChatUtils.SECONDARY_COLOR + o.toString());
         }
@@ -165,10 +171,18 @@ public class ConfigEditCommand implements TabExecutor {
         }
 
         YamlConfiguration configuration = configFiles.get(plugin).getRight();
-        //TODO: Change how value is set depending on current value type
-        configuration.set(field, value);
 
-        sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_SUCCESS_COLOR + "Set the value of " + field + " to " + ChatUtils.SECONDARY_COLOR + value + ChatUtils.MESSAGE_SUCCESS_COLOR + ".");
+        YamlConfiguration config1 = new YamlConfiguration();
+
+        try {
+            config1.load(new StringReader("{\"" + field + "\":" + value + "}"));
+            configuration.set(field, config1.get(field));
+
+            sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_SUCCESS_COLOR + "Set the value of " + field + " to");
+            sender.sendMessage(ChatUtils.SECONDARY_COLOR + config1.saveToString());
+        } catch (IOException | InvalidConfigurationException ex) {
+            sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_FAIL_COLOR + ex.getMessage());
+        }
     }
 
     private void onSaveCommand(String plugin, CommandSender sender) {
@@ -196,22 +210,14 @@ public class ConfigEditCommand implements TabExecutor {
         }
 
         YamlConfiguration config = configFiles.get(plugin).getRight();
-
-        //TODO: Fix ugly loop
-        int count = 0;
-        for (String key : config.getKeys(true)) {
-            if (count < (page - 1) * 15) {
-                count++;
-                continue;
-            }
-            if (count > page * 15) {
-                break;
-            }
-            sender.sendMessage(ChatUtils.MAIN_COLOR + translateKey(key) + ChatUtils.MESSAGE_COLOR + " - " + ChatUtils.SECONDARY_COLOR + config.get(key));
-            count++;
+        String[] configText = config.saveToString().split("\n");
+        for (int i = page * 15; i < (page + 1) * 15 && i < configText.length; i++) {
+            sender.sendMessage(ChatUtils.MESSAGE_COLOR + configText[i]);
         }
 
-        sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_COLOR + "To view the next page use /config print " + plugin + " " + ++page);
+        if ((page + 1) * 15 < configText.length) {
+            sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_COLOR + "To view the next page use /config print " + plugin + " " + (++page + 1));
+        }
     }
 
     private String translateKey(String key) {
