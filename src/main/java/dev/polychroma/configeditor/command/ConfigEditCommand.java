@@ -45,10 +45,10 @@ public class ConfigEditCommand implements TabExecutor {
                     sender.sendMessage(getloadSyntax());
                     return true;
                 }
-                if (args.length == 3) {
-                    onLoadCommand(args[1], sender, args[2]);
-                } else {
+                if (args.length == 2) {
                     onLoadCommand(args[1], sender, null);
+                } else {
+                    onLoadCommand(args[1], sender, args[2]);
                 }
                 return true;
             }
@@ -86,7 +86,7 @@ public class ConfigEditCommand implements TabExecutor {
                     return true;
                 }
                 String pg;
-                if (args.length == 3) {
+                if (args.length >= 3) {
                     pg = args[2];
                 } else {
                     pg = "1";
