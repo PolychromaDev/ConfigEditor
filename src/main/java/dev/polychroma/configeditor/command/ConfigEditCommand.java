@@ -95,7 +95,7 @@ public class ConfigEditCommand implements TabExecutor {
                     pg = "1";
                 }
                 try {
-                    int page = Integer.parseInt(pg);
+                    int page = Integer.parseInt(pg) - 1;
                     onPrintCommand(args[1], sender, page);
                     return true;
                 } catch (NumberFormatException e) {
@@ -210,22 +210,14 @@ public class ConfigEditCommand implements TabExecutor {
         }
 
         YamlConfiguration config = configFiles.get(plugin).getRight();
-
-        //TODO: Fix ugly loop
-        int count = 0;
-        for (String key : config.getKeys(true)) {
-            if (count < (page - 1) * 15) {
-                count++;
-                continue;
-            }
-            if (count > page * 15) {
-                break;
-            }
-            sender.sendMessage(ChatUtils.MAIN_COLOR + translateKey(key) + ChatUtils.MESSAGE_COLOR + " - " + ChatUtils.SECONDARY_COLOR + config.get(key));
-            count++;
+        String[] configText = config.saveToString().split("\n");
+        for (int i = page * 15; i < (page + 1) * 15 && i < configText.length; i++) {
+            sender.sendMessage(ChatUtils.MESSAGE_COLOR + configText[i]);
         }
 
-        sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_COLOR + "To view the next page use /config print " + plugin + " " + ++page);
+        if ((page + 1) * 15 < configText.length) {
+            sender.sendMessage(ChatUtils.PREFIX + " " + ChatUtils.MESSAGE_COLOR + "To view the next page use /config print " + plugin + " " + (++page + 1));
+        }
     }
 
     private String translateKey(String key) {
